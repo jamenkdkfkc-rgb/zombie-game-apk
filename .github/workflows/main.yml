@@ -21,15 +21,13 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: '17'
 
-      - name: Extract project ZIP if present
+      - name: Check Java version
         run: |
-          ZIP=$(find . -maxdepth 1 -name '*.zip' | head -n 1)
-          if [ -n "$ZIP" ]; then
-            mkdir -p extracted
-            unzip -oq "$ZIP" -d extracted
-          fi
+          java -version
+          echo "JAVA_HOME=$JAVA_HOME"
+          ./gradlew --version || true
 
       - name: Find project folder
         run: |
