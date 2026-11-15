@@ -17,30 +17,60 @@ jobs:
         with:
           node-version: 20
 
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Extract project ZIP if present
+        run: |
+          ZIP=$(find . -maxdepth 1 -name '*.zip' | head -n 1)
+          if [ -n "$ZIP" ]; then
+            mkdir -p extracted
+            unzip -oq "$ZIP" -d extracted
+          fi
+
+      - name: Find project folder
+        run: |
+          PKG=$(find . -type f -name package.json \
+            -not -path './.git/*' \
+            -not -path './node_modules/*' | head -n 1)
+          if [ -z "$PKG" ]; then
+            echo "ERROR: package.json not found"
+            exit 1
+          fi
+          echo "PROJECT_DIR=$(dirname "$PKG")" >> $GITHUB_ENV
+
       - name: Install dependencies
         run: |
+          cd "$PROJECT_DIR"
           npm install
           npm install @capacitor/android@^7
 
-      - name: Prepare game files
+      - name: Prepare game
         run: |
+          cd "$PROJECT_DIR"
           mkdir -p www
-          if [ -f index.html ]; then
+          if [ -f index.html ] && [ ! -f www/index.html ]; then
             cp index.html www/index.html
           fi
 
       - name: Add Android platform
         run: |
+          cd "$PROJECT_DIR"
           if [ ! -d android ]; then
             npx cap add android
           fi
 
       - name: Sync Android
-        run: npx cap sync android
+        run: |
+          cd "$PROJECT_DIR"
+          npx cap sync android
 
       - name: Build APK
         run: |
-          cd android
+          cd "$PROJECT_DIR/android"
           chmod +x gradlew
           ./gradlew assembleDebug
 
@@ -48,5 +78,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: zombie-game-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: ${{ env.PROJECT_DIR }}/android/app/build/outputs/apk/debug/app-debug.apk
           
